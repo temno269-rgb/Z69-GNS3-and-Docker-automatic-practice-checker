@@ -1,12 +1,9 @@
 import json
+import csv
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Optional, Set
 from datetime import datetime
-
-PROJECT_ROOT = Path(__file__).resolve().parent
-EXAMPLE_DIR = PROJECT_ROOT / "Example" / "results" / "Example2_2"
-STUDENTS_ROOT = PROJECT_ROOT / "Student" / "results"
-STATE_PATH = PROJECT_ROOT / "results" / ".last_student_folder"
+from collections import defaultdict
 
 Diff = Tuple[str, str, Any, Any]
 
@@ -15,38 +12,6 @@ MONTHS_RU = {
     5: "мая", 6: "июня", 7: "июля", 8: "августа",
     9: "сентября", 10: "октября", 11: "ноября", 12: "декабря"
 }
-
-
-def choose_student_folder() -> str:
-    last_name = None
-    try:
-        if STATE_PATH.exists():
-            last_name = STATE_PATH.read_text(encoding="utf-8").strip() or None
-    except Exception:
-        last_name = None
-
-    prompt = "Введите название папки:"
-    while True:
-        user_input = input(prompt).strip()
-        if not user_input:
-            if last_name:
-                name = last_name
-            else:
-                print("Папка не указана и ранее не сохранялась.")
-                continue
-        else:
-            name = user_input
-
-        candidate = STUDENTS_ROOT / name
-        if candidate.exists() and candidate.is_dir():
-            try:
-                STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-                STATE_PATH.write_text(name, encoding="utf-8")
-            except Exception:
-                pass
-            return name
-        else:
-            print(f"Папка не найдена: {candidate}")
 
 
 def _path_join(path: str, segment: str) -> str:
@@ -68,19 +33,6 @@ def _path_key(path: str, list_key: str, key_value: Any) -> str:
     if not path:
         return f"[{list_key}={key_value}]"
     return f"{path}[{list_key}={key_value}]"
-
-
-def _load_json(path: Path) -> Any:
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def load_first_existing_by_stem(folder: Path, stem: str) -> Optional[Any]:
-    candidates = [folder / stem, folder / f"{stem}.json"]
-    for p in candidates:
-        if p.exists() and p.is_file():
-            return _load_json(p)
-    return None
 
 
 CANDIDATE_KEYS = ("id", "name", "key", "uid", "uuid", "index", "hostname", "title")
@@ -209,103 +161,57 @@ def count_mismatched_atoms(diffs):
     return mismatches
 
 
-def find_previous_txt(results_root: Path) -> Optional[Path]:
-    txts = sorted(results_root.glob("*.txt"))
-    return txts[-1] if txts else None
-
-
-def parse_prev_errors_by_device(txt: str) -> Dict[str, Set[str]]:
-    errors: Dict[str, Set[str]] = {}
-    current = None
-    for line in txt.splitlines():
-        if line.endswith(":") and not line.startswith(" "):
-            current = line[:-1].strip()
-            if current not in errors:
-                errors[current] = set()
-            continue
-        if current and line.startswith(" - "):
-            errors[current].add(line)
-    return errors
-
-
-def build_device_report(device: str, diffs, prev_errors_for_device: Optional[Set[str]]) -> str:
-    lines: List[str] = [f"{device}:"]
-
-    if len(diffs) == 1 and diffs[0][0] == "missing_in_student" and diffs[0][1] == device and diffs[0][3] is None:
-        lines.append("ОТСУТСТВУЕТ")
-        return "\n".join(lines)
-
-    if not diffs:
-        lines.append("OK")
-        return "\n".join(lines)
-
-    first = True
-    for kind, path, exp, act in diffs:
-        if not first:
-            lines.append("")
-        first = False
-
-        if kind == "missing_in_student":
-            lines.append(f" - Отсутствует у студента: {path}")
-        elif kind == "extra_in_student":
-            lines.append(f" - Лишний ключ у студента: {path}")
-        elif kind == "missing_item_in_student":
-            lines.append(f" - Отсутствует элемент у студента: {path}")
-        elif kind == "extra_item_in_student":
-            lines.append(f" - Лишний элемент у студента: {path}")
-        elif kind == "list_len_diff":
-            lines.append(f" - Разная длина списка: {path} — эталон={exp}, студент={act}")
-        elif kind == "type_diff":
-            lines.append(f" - Разный тип данных: {path} — эталон={exp}, студент={act}")
-        elif kind == "value_diff":
-            lines.append(f" - Разное значение: {path}")
-            exp_s = str(exp) if len(str(exp)) <= 200 else str(exp)[:200] + "…"
-            act_s = str(act) if len(str(act)) <= 200 else str(act)[:200] + "…"
-            lines.append(f"   ожидается: {exp_s}")
-            lines.append(f"   у студента: {act_s}")
-        else:
-            lines.append(f" - Различие: {path}")
-
-    if prev_errors_for_device is not None:
-        current_errors = {l for l in lines if l.startswith(" - ")}
-        new_errs = [e for e in current_errors if e not in prev_errors_for_device]
-        if new_errs:
-            lines.append("")
-            lines.append("----------------------------")
-            lines.append("Новые ошибки:")
-            lines.extend(sorted(new_errs))
-
-    return "\n".join(lines)
-
-
-def main() -> None:
-    student_folder = choose_student_folder()
-    student_dir = STUDENTS_ROOT / student_folder
-
-    expected_devices = set(p.stem for p in EXAMPLE_DIR.iterdir() if p.is_file())
-    actual_devices = set(p.stem for p in student_dir.iterdir() if p.is_file())
-    all_devices = sorted(expected_devices | actual_devices)
-
-    results_root = PROJECT_ROOT / "results" / student_folder
-    results_root.mkdir(parents=True, exist_ok=True)
-
-    prev_txt_path = find_previous_txt(results_root)
-    prev_errors_by_device: Dict[str, Set[str]] = {}
-    if prev_txt_path and prev_txt_path.exists():
+def load_examples_from_core() -> Dict[str, Any]:
+    """
+    Загружает эталонные конфигурации из папки core/examples.
+    Возвращает словарь {имя_устройства: конфигурация}
+    """
+    examples_dir = Path(__file__).parent.parent / "examples"
+    
+    if not examples_dir.exists():
+        print(f"Предупреждение: папка examples не найдена: {examples_dir}")
+        return {}
+    
+    examples = {}
+    for file_path in examples_dir.glob("*.json"):
         try:
-            prev_text = prev_txt_path.read_text(encoding="utf-8")
-            prev_errors_by_device = parse_prev_errors_by_device(prev_text)
-        except Exception:
-            prev_errors_by_device = {}
+            with file_path.open("r", encoding="utf-8") as f:
+                examples[file_path.stem] = json.load(f)
+        except Exception as e:
+            print(f"Ошибка загрузки {file_path}: {e}")
+    
+    return examples
 
+
+def compare_configs(student_data: Dict[str, Any], output_path: Path) -> float:
+    """
+    Сравнивает данные студента с эталонными конфигурациями.
+    
+    Args:
+        student_data: словарь {имя_устройства: конфигурация}
+        output_path: путь для сохранения CSV отчёта
+    
+    Returns:
+        процент совпадения (0.0 - 100.0)
+    """
+    # Загружаем эталоны
+    examples = load_examples_from_core()
+    
+    if not examples:
+        print("Ошибка: эталонные конфигурации не найдены")
+        return 0.0
+    
+    # Получаем все устройства
+    all_devices = sorted(set(examples.keys()) | set(student_data.keys()))
+    
     total_atoms = 0
     total_mismatches = 0
-    device_reports: List[str] = []
-
+    device_reports = []
+    
     for device in all_devices:
-        expected = load_first_existing_by_stem(EXAMPLE_DIR, device)
-        actual = load_first_existing_by_stem(student_dir, device)
-
+        expected = examples.get(device)
+        actual = student_data.get(device)
+        
         diffs = []
         if expected is None and actual is None:
             continue
@@ -318,28 +224,67 @@ def main() -> None:
         else:
             diffs = compare_json(expected, actual, "")
             expected_root = expected
-
+        
         total_atoms += count_atoms(expected_root)
         total_mismatches += count_mismatched_atoms(diffs)
-
-        prev_errs = prev_errors_by_device.get(device)
-        device_text = build_device_report(device, diffs, prev_errs)
-        device_reports.append(device_text)
-
+        
+        # Формируем отчёт по устройству
+        device_report = {
+            "device": device,
+            "status": "OK" if not diffs else "ERRORS",
+            "errors_count": len(diffs),
+            "diffs": diffs
+        }
+        device_reports.append(device_report)
+    
+    # Вычисляем процент совпадения
     similarity = round(100.0 * max(0, total_atoms - total_mismatches) / max(1, total_atoms), 2)
-    header = f"Совпадение: {similarity:.2f}%"
-    final_text = header + "\n\n\n" + ("\n\n\n".join(device_reports) if device_reports else "")
-
-    now = datetime.now()
-    month_name = MONTHS_RU[now.month]
-    file_time_fs = f"{now.day} {month_name} {now.hour:02d}-{now.minute:02d}"
-    out_name = f"{student_folder} {file_time_fs}.txt"
-    out_path = results_root / out_name
-
-    out_path.write_text(final_text, encoding="utf-8")
-    print(final_text)
-    print(f"\nОтчёт сохранён: {out_path}")
+    
+    # Сохраняем CSV отчёт
+    save_csv_report(device_reports, similarity, output_path)
+    
+    return similarity
 
 
-if __name__ == "__main__":
-    main()
+def save_csv_report(device_reports: List[Dict], similarity: float, output_path: Path):
+    """
+    Сохраняет отчёт в CSV формате.
+    """
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    with output_path.open("w", encoding="utf-8-sig", newline="") as csvfile:
+        writer = csv.writer(csvfile, delimiter=";")
+        
+        # Заголовок отчёта
+        writer.writerow([f"Результат проверки: {similarity:.2f}%"])
+        writer.writerow([])
+        
+        # Заголовки таблицы
+        writer.writerow(["Устройство", "Тип ошибки", "Путь", "Ожидается", "У студента"])
+        
+        # Данные
+        for report in device_reports:
+            device = report["device"]
+            
+            if report["status"] == "OK":
+                writer.writerow([device, "OK", "-", "-", "-"])
+            else:
+                for kind, path, exp, act in report["diffs"]:
+                    error_type = {
+                        "missing_in_student": "Отсутствует",
+                        "extra_in_student": "Лишний ключ",
+                        "missing_item_in_student": "Отсутствует элемент",
+                        "extra_item_in_student": "Лишний элемент",
+                        "list_len_diff": "Разная длина списка",
+                        "type_diff": "Разный тип данных",
+                        "value_diff": "Разное значение"
+                    }.get(kind, kind)
+                    
+                    # Обрезаем длинные значения
+                    exp_str = str(exp) if exp is not None and len(str(exp)) <= 100 else (str(exp)[:100] + "...") if exp is not None else "-"
+                    act_str = str(act) if act is not None and len(str(act)) <= 100 else (str(act)[:100] + "...") if act is not None else "-"
+                    
+                    writer.writerow([device, error_type, path, exp_str, act_str])
+                
+                # Пустая строка между устройствами
+                writer.writerow([])
