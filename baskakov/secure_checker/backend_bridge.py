@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 from typing import Callable, Optional
 
-from secure_checker.core.parser.Parse import parser_main
+from secure_checker.core.parser.parse import parser_main
 
 # ✅ Получить путь к config.json в пользовательскую папку
 appdata = os.getenv('APPDATA')
