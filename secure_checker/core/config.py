@@ -5,14 +5,14 @@ CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.json"
 def load_settings() -> dict:
     if not CONFIG_PATH.exists():
         defaults = {
-            "gns3_server": {
-                "ip": "10.242.192.200",
-                "port": "3080",
-                "project_name": "",
-                "login": "admin",
-                "password": "*"
-            }
-        }
+  "ip": "192.168.56.10",
+  "port": "80",
+  "project": "1",
+  "local": False,
+  "login": "admin",
+  "password": "*",
+  "desktop_results": True
+}
         save_settings(defaults)
         return defaults
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
