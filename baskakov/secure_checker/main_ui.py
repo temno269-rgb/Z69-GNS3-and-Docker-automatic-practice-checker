@@ -1,5 +1,9 @@
 import json
+import os
+import sys
+import threading
 from pathlib import Path
+from datetime import datetime
 
 from PyQt5.QtCore import Qt, QRect, QEasingCurve, QPropertyAnimation, QSize, QTimer
 from PyQt5.QtGui import (
@@ -10,16 +14,10 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QPushButton, QLabel,
     QTextEdit, QFrame, QLineEdit, QProxyStyle, QStyle
 )
-import sys
-import os
-import random
-import threading
-
 
 from secure_checker.cli_commands import handle_command
 from secure_checker.backend_bridge import run_parse
-
-
+from secure_checker.core.comparator.compare import compare_configs
 
 
 class NoCursorStyle(QProxyStyle):
@@ -55,7 +53,6 @@ class CmdLineEdit(QLineEdit):
         if not self.hasFocus() or not self._blink_visible:
             return
         fm = QFontMetrics(self.font())
-        uw = max(fm.averageCharWidth(), 8)  # если захочешь использовать в будущем
         pr = self.cursorRect()
         x = pr.x()
         y = pr.bottom() - 3
@@ -117,8 +114,6 @@ class MainWindow(QMainWindow):
         self.setStyleSheet("background-color: #fafafa; color: black;")
         self.drag_pos = None
 
-        self.drag_pos = None
-
         if getattr(sys, 'frozen', False):
             base_dir = sys._MEIPASS
         else:
@@ -126,15 +121,25 @@ class MainWindow(QMainWindow):
 
         assets_dir = os.path.join(base_dir, "assets")
 
-        font_id = QFontDatabase.addApplicationFont(os.path.join(assets_dir, "ChakraPetch-Regular.otf"))
-        family = QFontDatabase.applicationFontFamilies(font_id)[0]
-        chakra_font = QFont(family, 16, QFont.Bold)
+        # Загрузка шрифта
+        font_path = os.path.join(assets_dir, "ChakraPetch-Regular.otf")
+        if os.path.exists(font_path):
+            font_id = QFontDatabase.addApplicationFont(font_path)
+            if font_id != -1:
+                family = QFontDatabase.applicationFontFamilies(font_id)[0]
+                chakra_font = QFont(family, 16, QFont.Bold)
+            else:
+                chakra_font = QFont("Arial", 16, QFont.Bold)
+        else:
+            chakra_font = QFont("Arial", 16, QFont.Bold)
 
         # Кнопка меню (консоль)
         self.menu_btn = QPushButton(self)
         self.menu_btn.setGeometry(12, 7, 35, 35)
-        self.menu_btn.setIcon(QIcon(os.path.join(assets_dir, "icons8-консоль-48 (1).png")))
-        self.menu_btn.setIconSize(QSize(33, 33))
+        icon_path = os.path.join(assets_dir, "icons8-консоль-48 (1).png")
+        if os.path.exists(icon_path):
+            self.menu_btn.setIcon(QIcon(icon_path))
+            self.menu_btn.setIconSize(QSize(33, 33))
         self.menu_btn.setFlat(True)
         self.menu_btn.setCursor(Qt.PointingHandCursor)
         self.menu_btn.setStyleSheet("""
@@ -152,18 +157,24 @@ class MainWindow(QMainWindow):
         # Кнопки управления окном
         self.min_btn = QPushButton(self)
         self.min_btn.setGeometry(910, 7, 25, 25)
-        self.min_btn.setIcon(QIcon(os.path.join(assets_dir, "minus.png")))
-        self.min_btn.setIconSize(QSize(17, 17))
+        minus_path = os.path.join(assets_dir, "minus.png")
+        if os.path.exists(minus_path):
+            self.min_btn.setIcon(QIcon(minus_path))
+            self.min_btn.setIconSize(QSize(17, 17))
 
         self.max_btn = QPushButton(self)
         self.max_btn.setGeometry(940, 7, 25, 25)
-        self.max_btn.setIcon(QIcon(os.path.join(assets_dir, "square.png")))
-        self.max_btn.setIconSize(QSize(17, 17))
+        square_path = os.path.join(assets_dir, "square.png")
+        if os.path.exists(square_path):
+            self.max_btn.setIcon(QIcon(square_path))
+            self.max_btn.setIconSize(QSize(17, 17))
 
         self.close_btn = QPushButton(self)
         self.close_btn.setGeometry(970, 7, 25, 25)
-        self.close_btn.setIcon(QIcon(os.path.join(assets_dir, "close.png")))
-        self.close_btn.setIconSize(QSize(17, 17))
+        close_path = os.path.join(assets_dir, "close.png")
+        if os.path.exists(close_path):
+            self.close_btn.setIcon(QIcon(close_path))
+            self.close_btn.setIconSize(QSize(17, 17))
 
         hover_style = "QPushButton:hover {background-color: #bfbfbf; border: none;}"
         for b in [self.min_btn, self.max_btn]:
@@ -184,9 +195,11 @@ class MainWindow(QMainWindow):
         # Главное изображение
         self.main_img = QLabel(self)
         self.main_img.setGeometry(2, 64, 996, 620)
-        pixmap = QPixmap(os.path.join(assets_dir, "main_image.png"))
-        scaled = pixmap.scaled(1825, 858, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.main_img.setPixmap(scaled)
+        main_img_path = os.path.join(assets_dir, "main_image.png")
+        if os.path.exists(main_img_path):
+            pixmap = QPixmap(main_img_path)
+            scaled = pixmap.scaled(1825, 858, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.main_img.setPixmap(scaled)
         self.main_img.setAlignment(Qt.AlignCenter)
 
         # Кнопка "Проверить"
@@ -203,23 +216,13 @@ class MainWindow(QMainWindow):
         self.result_label = QLabel("Ваш результат: --%", self)
         self.result_label.setGeometry(0, 30, self.width(), 30)
         self.result_label.setAlignment(Qt.AlignCenter)
-        self.result_label.setFont(QFont(family, 18, QFont.Bold))
+        result_font = QFont(chakra_font)
+        result_font.setPointSize(18)
+        self.result_label.setFont(result_font)
         self.result_label.hide()
 
-        # Папки с картинками
-        self.low_pack_dir = os.path.join(assets_dir, "fail_pack")
-        self.high_pack_dir = os.path.join(assets_dir, "success_pack")
-
-
-        # Кешированные пиксмэпы, чтобы не грузить картинки каждый раз
-        self._fail_pixmaps = None
-        self._success_pixmaps = None
-
-        # QLabel с картинками результата
-        self._result_images = []
-
-        # Обработчик кнопки "Проверить"
-        self.check_btn.clicked.connect(self.show_result)
+        # Обработчик кнопки "Проверить" - теперь запускает парсер и компаратор
+        self.check_btn.clicked.connect(self.run_check)
 
         # Консоль
         self.console = ConsoleFrame(self)
@@ -312,109 +315,112 @@ class MainWindow(QMainWindow):
         painter.setPen(QPen(Qt.black, 1))
         painter.drawRect(0, 0, self.width() - 1, self.height() - 1)
 
-    def _run_backend_parse(self):
+    def run_check(self):
+        """
+        Обработчик кнопки "Проверить" - запускает парсер и компаратор
+        """
+        self.result_label.setText("Ваш результат: проверка...")
+        self.result_label.show()
+        
+        # Запускаем в отдельном потоке
+        th = threading.Thread(target=self._run_check_thread, daemon=True)
+        th.start()
+
+    def _run_check_thread(self):
+        """
+        Полный цикл: парсер -> компаратор -> отображение результата
+        """
         try:
+            # Определяем путь к %APPDATA%/Z69
+            appdata = os.getenv('APPDATA')
+            if appdata:
+                base_dir = Path(appdata) / "Z69"
+            else:
+                base_dir = Path.home() / "Z69"
+            
+            base_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Шаг 1: Запуск парсера
+            self.write_to_console("[1/3] Запуск парсера GNS3...")
+            result = run_parse(log_func=self.write_to_console)
+            
+            if not result or "data" not in result:
+                self.write_to_console("✘ Ошибка: парсер не вернул данные")
+                self.result_label.setText("Ваш результат: Ошибка парсера")
+                return
+            
+            student_data = result.get("data", {})
+            
+            # Шаг 2: Сохранение результатов парсера
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            parse_file = base_dir / f"parse_{timestamp}.json"
+            
+            with parse_file.open("w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False, indent=2)
+            
+            self.write_to_console(f"[2/3] Результаты парсера сохранены: {parse_file}")
+            
+            # Шаг 3: Запуск компаратора
+            self.write_to_console("[3/3] Сравнение с эталоном...")
+            
+            results_dir = base_dir / "results"
+            results_dir.mkdir(parents=True, exist_ok=True)
+            
+            csv_file = results_dir / f"report_{timestamp}.csv"
+            
+            similarity = compare_configs(student_data, csv_file)
+            
+            # Отображение результата
+            self.result_label.setText(f"Ваш результат: {similarity:.2f}%")
+            
+            self.write_to_console(f"\n✓ Проверка завершена!")
+            self.write_to_console(f"Результат: {similarity:.2f}%")
+            self.write_to_console(f"Отчёт сохранён: {csv_file}")
+            self.write_to_console(f"Данные парсера: {parse_file}")
+            
+        except Exception as e:
+            self.write_to_console(f"\n✘ Критическая ошибка: {e}")
+            import traceback
+            traceback.print_exc()
+            self.result_label.setText("Ваш результат: Ошибка")
+
+    def _run_backend_parse(self):
+        """
+        Запуск парсера из консоли (без компаратора)
+        """
+        try:
+            # Определяем путь к %APPDATA%/Z69
+            appdata = os.getenv('APPDATA')
+            if appdata:
+                base_dir = Path(appdata) / "Z69"
+            else:
+                base_dir = Path.home() / "Z69"
+            
+            base_dir.mkdir(parents=True, exist_ok=True)
+            
             # Запускаем парсер
             result = run_parse(log_func=self.write_to_console)
-            print(result)
-
-            # ✅ Сохраняем результаты на рабочий стол
-            desktop_path = str(Path.home() / "Desktop")
-
-            # Создаём папку для результатов парса (например "parse_results_2025-11-17")
-            from datetime import datetime
+            
+            # Сохраняем результаты
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            results_dir = os.path.join(desktop_path, f"parse_results_{timestamp}")
-
-            os.makedirs(results_dir, exist_ok=True)
-
-            # Сохраняем результаты в JSON
-            output_file = os.path.join(results_dir, "parse_results.json")
-            with open(output_file, "w", encoding="utf-8") as f:
+            parse_file = base_dir / f"parse_{timestamp}.json"
+            
+            with parse_file.open("w", encoding="utf-8") as f:
                 json.dump(result, f, ensure_ascii=False, indent=2)
-
-            self.write_to_console(f"✅ Результаты сохранены: {output_file}")
-            self.write_to_console(f"   Открыть папку: {results_dir}")
-
-            # (Опционально) Сохраняем каждый узел в отдельный файл
+            
+            self.write_to_console(f"\n✓ Результаты сохранены: {parse_file}")
+            
+            # Сохраняем каждый узел отдельно
             data = result.get("data", {})
             for node_name, node_config in data.items():
-                node_file = os.path.join(results_dir, f"{node_name}.json")
-                with open(node_file, "w", encoding="utf-8") as f:
+                node_file = base_dir / f"{node_name}_{timestamp}.json"
+                with node_file.open("w", encoding="utf-8") as f:
                     json.dump(node_config, f, ensure_ascii=False, indent=2)
-
-            self.write_to_console(f"💾 Сохранено {len(data)} конфигов узлов")
-
+            
+            self.write_to_console(f"Сохранено {len(data)} конфигов узлов")
+            
         except Exception as e:
-            self.write_to_console(f"❌ Ошибка запуска парсера: {e}")
-
-    def _load_pack_pixmaps(self, img_dir):
-        pixmaps = []
-        if not os.path.isdir(img_dir):
-            return pixmaps
-        for fname in sorted(os.listdir(img_dir)):
-            if not fname.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif")):
-                continue
-            path = os.path.join(img_dir, fname)
-            pm = QPixmap(path)
-            if pm.isNull():
-                continue
-            pm = pm.scaled(125, 125, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            pixmaps.append(pm)
-        return pixmaps
-
-    def show_result(self):
-        # 66% — < 99.0, 34% — >= 99.0
-        if random.random() < 0.66:
-            value = round(random.uniform(1.0, 99.0), 1)
-            img_dir = self.low_pack_dir
-        else:
-            value = round(random.uniform(99.0, 100.0), 1)
-            img_dir = self.high_pack_dir
-
-        # Обновляем текст результата
-        self.result_label.setText(f"Ваш результат: {value}%")
-        self.result_label.show()
-
-        # Удаляем старое изображение (если было)
-        for lbl in self._result_images:
-            lbl.setParent(None)
-            lbl.deleteLater()
-        self._result_images.clear()
-
-        # Выбираем набор картинок для текущего диапазона
-        if img_dir == self.low_pack_dir:
-            if self._fail_pixmaps is None:
-                self._fail_pixmaps = self._load_pack_pixmaps(self.low_pack_dir)
-            pixmaps = self._fail_pixmaps
-        else:
-            if self._success_pixmaps is None:
-                self._success_pixmaps = self._load_pack_pixmaps(self.high_pack_dir)
-            pixmaps = self._success_pixmaps
-
-        if not pixmaps:
-            return
-
-        # Берём ОДНО случайное изображение из набора
-        pm = random.choice(pixmaps)
-
-        # Координаты: центр по горизонтали, снизу, но без заезда на main_img
-        img_w = pm.width()
-        img_h = pm.height()
-
-        x = max(0, (self.width() - img_w) // 2)
-
-        # Позиция по вертикали: сначала пробуем сразу под main_img
-        y_candidate = self.main_img.y() + self.main_img.height() + 10
-        y_bottom = self.height() - img_h - 10
-        y = min(y_candidate, y_bottom)
-
-        lbl = QLabel(self)
-        lbl.setPixmap(pm)
-        lbl.setGeometry(x, y, img_w, img_h)
-        lbl.setAlignment(Qt.AlignCenter)
-        lbl.show()
-        self._result_images.append(lbl)
+            self.write_to_console(f"✘ Ошибка запуска парсера: {e}")
 
 
 if __name__ == "__main__":
