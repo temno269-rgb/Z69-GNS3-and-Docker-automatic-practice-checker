@@ -351,18 +351,9 @@ class MainWindow(QMainWindow):
             
             student_data = result.get("data", {})
             
-            # Шаг 2: Сохранение результатов парсера
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            parse_file = base_dir / f"parse_{timestamp}.json"
-            
-            with parse_file.open("w", encoding="utf-8") as f:
-                json.dump(result, f, ensure_ascii=False, indent=2)
-            
-            self.write_to_console(f"[2/3] Результаты парсера сохранены: {parse_file}")
             
             # Шаг 3: Запуск компаратора
-            self.write_to_console("[3/3] Сравнение с эталоном...")
-            
+        self.write_to_console("[2/2] Сравнение с эталоном...")            
             results_dir = base_dir / "results"
             results_dir.mkdir(parents=True, exist_ok=True)
             
@@ -376,7 +367,6 @@ class MainWindow(QMainWindow):
             self.write_to_console(f"\n✓ Проверка завершена!")
             self.write_to_console(f"Результат: {similarity:.2f}%")
             self.write_to_console(f"Отчёт сохранён: {csv_file}")
-            self.write_to_console(f"Данные парсера: {parse_file}")
             
         except Exception as e:
             self.write_to_console(f"\n✘ Критическая ошибка: {e}")
