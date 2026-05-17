@@ -1,0 +1,142 @@
+{
+  "export": {
+    "/interface ethernet": [
+      {
+        "cmd": "set",
+        "default-name": "ether1",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether2",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether3",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether4",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether5",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether6",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether7",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether8",
+        "disable-running-check": "no"
+      }
+    ],
+    "/interface gre": [
+      {
+        "cmd": "add",
+        "allow-fast-path": "no",
+        "ipsec-secret": "SecretTigerPassword",
+        "local-address": "\\"
+      },
+      {
+        "cmd": "192.168.122.162",
+        "name": "gre-tunnel",
+        "remote-address": "192.168.122.51"
+      }
+    ],
+    "/interface wireless security-profiles": [
+      {
+        "cmd": "set",
+        "default": "yes",
+        "supplicant-identity": "MikroTik"
+      }
+    ],
+    "/routing ospf instance": [
+      {
+        "cmd": "set",
+        "default": "yes",
+        "distribute-default": "always-as-type-1"
+      }
+    ],
+    "/ip address": [
+      {
+        "cmd": "add",
+        "address": "10.100.1.1/30",
+        "interface": "gre-tunnel",
+        "network": "10.100.1.0"
+      },
+      {
+        "cmd": "add",
+        "address": "10.100.3.1/30",
+        "interface": "ether2",
+        "network": "10.100.3.0"
+      },
+      {
+        "cmd": "add",
+        "address": "10.100.2.1/30",
+        "interface": "ether3",
+        "network": "10.100.2.0"
+      }
+    ],
+    "/ip dhcp-client": [
+      {
+        "cmd": "add",
+        "disabled": "no",
+        "interface": "ether1"
+      }
+    ],
+    "/ip dhcp-relay": [
+      {
+        "cmd": "add",
+        "dhcp-server": "10.0.20.1",
+        "disabled": "no",
+        "interface": "ether2",
+        "local-address": "\\"
+      },
+      {
+        "cmd": "10.0.30.254",
+        "name": "relay1"
+      }
+    ],
+    "/ip dns": [
+      {
+        "cmd": "set",
+        "servers": "8.8.8.8,8.8.4.4"
+      }
+    ],
+    "/ip firewall filter": [
+      {
+        "cmd": "add",
+        "action": "accept",
+        "chain": "input",
+        "comment": "Permit"
+      },
+      {
+        "cmd": "connection-state=new",
+        "protocol": "ipsec-esp"
+      },
+      {
+        "cmd": "add",
+        "action": "accept",
+        "chain": "input",
+        "comment": "Permit",
+        "connection-state": "new"
+      },
+      {
+        "cmd": "dst-port=500",
+        "protocol": "udp"
+      }
+    ]
+  }
+}

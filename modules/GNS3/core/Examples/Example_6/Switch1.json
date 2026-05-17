@@ -1,0 +1,52 @@
+{
+  "ports_mapping": [
+    {
+      "name": "Ethernet0",
+      "port_number": 0,
+      "type": "access",
+      "vlan": 1
+    },
+    {
+      "name": "Ethernet1",
+      "port_number": 1,
+      "type": "access",
+      "vlan": 1
+    },
+    {
+      "name": "Ethernet2",
+      "port_number": 2,
+      "type": "access",
+      "vlan": 1
+    },
+    {
+      "name": "Ethernet3",
+      "port_number": 3,
+      "type": "access",
+      "vlan": 1
+    },
+    {
+      "name": "Ethernet4",
+      "port_number": 4,
+      "type": "access",
+      "vlan": 1
+    },
+    {
+      "name": "Ethernet5",
+      "port_number": 5,
+      "type": "access",
+      "vlan": 1
+    },
+    {
+      "name": "Ethernet6",
+      "port_number": 6,
+      "type": "access",
+      "vlan": 1
+    },
+    {
+      "name": "Ethernet7",
+      "port_number": 7,
+      "type": "access",
+      "vlan": 1
+    }
+  ]
+}

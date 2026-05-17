@@ -1,0 +1,144 @@
+{
+  "export": {
+    "/interface ethernet": [
+      {
+        "cmd": "set",
+        "default-name": "ether1",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether2",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether3",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether4",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether5",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether6",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether7",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether8",
+        "disable-running-check": "no"
+      }
+    ],
+    "/interface wireless security-profiles": [
+      {
+        "cmd": "set",
+        "default": "yes",
+        "supplicant-identity": "MikroTik"
+      }
+    ],
+    "/ip address": [
+      {
+        "cmd": "add",
+        "address": "192.168.0.2/30",
+        "interface": "ether3",
+        "network": "192.168.0.0"
+      },
+      {
+        "cmd": "add",
+        "address": "10.4.63.254/18",
+        "interface": "ether2",
+        "network": "10.4.0.0"
+      },
+      {
+        "cmd": "add",
+        "address": "10.3.63.254/18",
+        "interface": "ether1",
+        "network": "10.3.0.0"
+      }
+    ],
+    "/ip dhcp-relay": [
+      {
+        "cmd": "add",
+        "dhcp-server": "10.4.0.1",
+        "disabled": "no",
+        "interface": "ether1",
+        "local-address": "\\"
+      },
+      {
+        "cmd": "10.3.63.254",
+        "name": "relay1"
+      }
+    ],
+    "/ip dns": [
+      {
+        "cmd": "set",
+        "servers": "8.8.8.8,8.8.4.4"
+      }
+    ],
+    "/ipv6 address": [
+      {
+        "cmd": "add",
+        "address": "2001:0:f872:3:ffff:ffff:ffff:fffe",
+        "interface": "ether1"
+      },
+      {
+        "cmd": "add",
+        "address": "2001:0:f872:4:ffff:ffff:ffff:fffe",
+        "interface": "ether2"
+      }
+    ],
+    "/routing ospf network": [
+      {
+        "cmd": "add",
+        "area": "backbone",
+        "network": "10.3.0.0/18"
+      },
+      {
+        "cmd": "add",
+        "area": "backbone",
+        "network": "10.4.0.0/18"
+      },
+      {
+        "cmd": "add",
+        "area": "backbone",
+        "network": "192.168.0.0/30"
+      }
+    ],
+    "/routing ospf-v3 interface": [
+      {
+        "cmd": "add",
+        "area": "backbone",
+        "interface": "ether1"
+      },
+      {
+        "cmd": "add",
+        "area": "backbone",
+        "interface": "ether2"
+      },
+      {
+        "cmd": "add",
+        "area": "backbone",
+        "interface": "ether3"
+      }
+    ],
+    "/system identity": [
+      {
+        "cmd": "set",
+        "name": "Router2"
+      }
+    ]
+  }
+}

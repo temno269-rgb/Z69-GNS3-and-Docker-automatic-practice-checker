@@ -1,0 +1,156 @@
+{
+  "export": {
+    "/interface ethernet": [
+      {
+        "cmd": "set",
+        "default-name": "ether1",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether2",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether3",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether4",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether5",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether6",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether7",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether8",
+        "disable-running-check": "no"
+      }
+    ],
+    "/interface vlan": [
+      {
+        "cmd": "add",
+        "interface": "ether1",
+        "name": "vlan10",
+        "vlan-id": "10"
+      },
+      {
+        "cmd": "add",
+        "interface": "ether1",
+        "name": "vlan20",
+        "vlan-id": "20"
+      }
+    ],
+    "/interface wireless security-profiles": [
+      {
+        "cmd": "set",
+        "default": "yes",
+        "supplicant-identity": "MikroTik"
+      }
+    ],
+    "/ip pool": [
+      {
+        "cmd": "add",
+        "name": "pool1",
+        "ranges": "10.0.1.1-10.0.1.253"
+      },
+      {
+        "cmd": "add",
+        "name": "pool2",
+        "ranges": "10.0.2.1-10.0.2.253"
+      },
+      {
+        "cmd": "add",
+        "name": "pool3",
+        "ranges": "10.0.3.1-10.0.3.253"
+      }
+    ],
+    "/ip dhcp-server": [
+      {
+        "cmd": "add",
+        "address-pool": "pool1",
+        "disabled": "no",
+        "interface": "vlan10",
+        "lease-time": "1d",
+        "name": "dhcp1"
+      },
+      {
+        "cmd": "add",
+        "address-pool": "pool2",
+        "disabled": "no",
+        "interface": "vlan20",
+        "lease-time": "1d",
+        "name": "dhcp2"
+      },
+      {
+        "cmd": "add",
+        "address-pool": "pool3",
+        "disabled": "no",
+        "interface": "ether2",
+        "lease-time": "1d",
+        "name": "dhcp3"
+      }
+    ],
+    "/ip address": [
+      {
+        "cmd": "add",
+        "address": "10.0.1.254/24",
+        "interface": "vlan10",
+        "network": "10.0.1.0"
+      },
+      {
+        "cmd": "add",
+        "address": "10.0.2.254/24",
+        "interface": "vlan20",
+        "network": "10.0.2.0"
+      },
+      {
+        "cmd": "add",
+        "address": "10.0.3.254/24",
+        "interface": "ether2",
+        "network": "10.0.3.0"
+      }
+    ],
+    "/ip dhcp-server network": [
+      {
+        "cmd": "add",
+        "address": "10.0.1.0/24",
+        "dns-server": "8.8.8.8,8.8.4.4",
+        "gateway": "10.0.1.254"
+      },
+      {
+        "cmd": "add",
+        "address": "10.0.2.0/24",
+        "dns-server": "8.8.8.8,8.8.4.4",
+        "gateway": "10.0.2.254"
+      },
+      {
+        "cmd": "add",
+        "address": "10.0.3.0/24",
+        "dns-server": "8.8.8.8,8.8.4.4",
+        "gateway": "10.0.3.254"
+      }
+    ],
+    "/system identity": [
+      {
+        "cmd": "set",
+        "name": "Router1"
+      }
+    ]
+  }
+}

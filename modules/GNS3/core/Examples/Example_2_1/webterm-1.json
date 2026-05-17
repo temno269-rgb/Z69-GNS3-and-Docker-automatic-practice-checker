@@ -1,0 +1,15 @@
+{
+  "adapters": 1,
+  "aux": 5006,
+  "console_http_path": "/",
+  "console_http_port": 80,
+  "console_resolution": "1024x768",
+  "container_id": "8e0a189c746d769fcdaaed015a7603812bb78d16af683d71e2db67437a13d78d",
+  "environment": "",
+  "extra_hosts": "",
+  "extra_volumes": [],
+  "image": "gns3/webterm:latest",
+  "mac_address": "02:42:c2:b1:37:00",
+  "start_command": null,
+  "usage": "The /root directory is persistent."
+}

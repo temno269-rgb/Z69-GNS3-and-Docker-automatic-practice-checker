@@ -1,0 +1,1 @@
+# Marks GNS3 as a python package

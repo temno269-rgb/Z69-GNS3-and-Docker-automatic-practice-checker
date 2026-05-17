@@ -1,0 +1,100 @@
+{
+  "export": {
+    "/interface ethernet": [
+      {
+        "cmd": "set",
+        "default-name": "ether1",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether2",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether3",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether4",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether5",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether6",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether7",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether8",
+        "disable-running-check": "no"
+      }
+    ],
+    "/interface wireless security-profiles": [
+      {
+        "cmd": "set",
+        "default": "yes",
+        "supplicant-identity": "MikroTik"
+      }
+    ],
+    "/ip address": [
+      {
+        "cmd": "add",
+        "address": "192.168.0.254/24",
+        "interface": "ether3",
+        "network": "192.168.0.0"
+      },
+      {
+        "cmd": "add",
+        "address": "172.16.20.254/24",
+        "interface": "ether2",
+        "network": "172.16.20.0"
+      },
+      {
+        "cmd": "add",
+        "address": "172.16.10.254/24",
+        "interface": "ether1",
+        "network": "172.16.10.0"
+      }
+    ],
+    "/ip dhcp-client": [
+      {
+        "cmd": "add",
+        "disabled": "no",
+        "interface": "ether1"
+      }
+    ],
+    "/ip route": [
+      {
+        "cmd": "add",
+        "distance": "1",
+        "dst-address": "10.11.12.0/24",
+        "gateway": "192.168.0.253"
+      },
+      {
+        "cmd": "add",
+        "distance": "1",
+        "dst-address": "10.11.13.0/24",
+        "gateway": "192.168.0.253"
+      }
+    ],
+    "/system identity": [
+      {
+        "cmd": "set",
+        "name": "left"
+      }
+    ]
+  }
+}

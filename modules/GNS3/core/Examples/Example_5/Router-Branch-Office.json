@@ -1,0 +1,66 @@
+{
+  "export": {
+    "/interface ethernet": [
+      {
+        "cmd": "set",
+        "default-name": "ether1",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether2",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether3",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether4",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether5",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether6",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether7",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether8",
+        "disable-running-check": "no"
+      }
+    ],
+    "/interface gre": [
+      {
+        "cmd": "add",
+        "allow-fast-path": "no",
+        "ipsec-secret": "SecretTigerPassword",
+        "local-address": "\\"
+      },
+      {
+        "cmd": "192.168.122.51",
+        "name": "gre-tunnel",
+        "remote-address": "192.168.122.162"
+      }
+    ],
+    "/interface wireless security-profiles": [
+      {
+        "cmd": "set",
+        "default": "yes",
+        "supplicant-identity": "MikroTik"
+      }
+    ]
+  }
+}

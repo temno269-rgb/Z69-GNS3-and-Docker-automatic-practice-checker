@@ -1,0 +1,103 @@
+{
+  "export": {
+    "/interface ethernet": [
+      {
+        "cmd": "set",
+        "default-name": "ether1",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether2",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether3",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether4",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether5",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether6",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether7",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether8",
+        "disable-running-check": "no"
+      }
+    ],
+    "/interface wireless security-profiles": [
+      {
+        "cmd": "set",
+        "default": "yes",
+        "supplicant-identity": "MikroTik"
+      }
+    ],
+    "/ip pool": [
+      {
+        "cmd": "add",
+        "name": "DHCP-Relay",
+        "ranges": "10.0.40.2-10.0.40.253"
+      }
+    ],
+    "/ip dhcp-server": [
+      {
+        "cmd": "add",
+        "address-pool": "DHCP-Relay",
+        "disabled": "no",
+        "interface": "ether1",
+        "lease-time": "1d",
+        "name": "\\"
+      },
+      {
+        "cmd": "relay1",
+        "relay": "10.0.40.254"
+      }
+    ],
+    "/ip address": [
+      {
+        "cmd": "add",
+        "address": "10.0.30.1/24",
+        "interface": "ether1",
+        "network": "10.0.30.0"
+      }
+    ],
+    "/ip dhcp-client": [
+      {
+        "cmd": "add",
+        "interface": "ether1"
+      }
+    ],
+    "/ip dhcp-server network": [
+      {
+        "cmd": "add",
+        "address": "10.0.40.0/24",
+        "dns-server": "8.8.8.8,8.8.4.4",
+        "gateway": "10.0.40.254"
+      }
+    ],
+    "/ip route": [
+      {
+        "cmd": "add",
+        "distance": "1",
+        "gateway": "10.0.30.254"
+      }
+    ]
+  }
+}

@@ -1,0 +1,199 @@
+{
+  "export": {
+    "/interface ethernet": [
+      {
+        "cmd": "set",
+        "default-name": "ether1",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether2",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether3",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether4",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether5",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether6",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether7",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether8",
+        "disable-running-check": "no"
+      }
+    ],
+    "/interface wireless security-profiles": [
+      {
+        "cmd": "set",
+        "default": "yes",
+        "supplicant-identity": "MikroTik"
+      }
+    ],
+    "/ip address": [
+      {
+        "cmd": "add",
+        "address": "10.0.20.254/24",
+        "interface": "ether1",
+        "network": "10.0.20.0"
+      },
+      {
+        "cmd": "add",
+        "address": "172.16.0.254/24",
+        "interface": "ether2",
+        "network": "172.16.0.0"
+      },
+      {
+        "cmd": "add",
+        "address": "10.0.30.254/24",
+        "interface": "ether3",
+        "network": "10.0.30.0"
+      },
+      {
+        "cmd": "add",
+        "address": "192.168.0.1/30",
+        "interface": "ether4",
+        "network": "192.168.0.0"
+      }
+    ],
+    "/ip dhcp-client": [
+      {
+        "cmd": "add",
+        "disabled": "no",
+        "interface": "ether1"
+      }
+    ],
+    "/ip firewall filter": [
+      {
+        "cmd": "add",
+        "action": "accept",
+        "chain": "forward",
+        "comment": "Permit"
+      },
+      {
+        "cmd": "connection-state=new",
+        "dst-address": "10.0.20.1",
+        "port": "80",
+        "protocol": "tcp"
+      },
+      {
+        "cmd": "src-address=172.16.0.0/24"
+      },
+      {
+        "cmd": "add",
+        "action": "accept",
+        "chain": "forward",
+        "comment": "\\"
+      },
+      {
+        "cmd": "\"Permit",
+        "connection-state": "new",
+        "dst-address": "\\"
+      },
+      {
+        "cmd": "10.0.30.1",
+        "port": "67",
+        "protocol": "udp",
+        "src-address": "192.168.0.0/30"
+      },
+      {
+        "cmd": "add",
+        "action": "accept",
+        "chain": "forward",
+        "comment": "Permit"
+      },
+      {
+        "cmd": "connection-state=new",
+        "dst-address": "10.0.40.0/24",
+        "port": "67",
+        "protocol": "udp"
+      },
+      {
+        "cmd": "src-address=10.0.30.1"
+      },
+      {
+        "cmd": "add",
+        "action": "accept",
+        "chain": "forward",
+        "comment": "Accept"
+      },
+      {
+        "cmd": "connection-state=established,related"
+      },
+      {
+        "cmd": "add",
+        "action": "drop",
+        "chain": "forward",
+        "comment": "Default"
+      }
+    ],
+    "/routing rip interface": [
+      {
+        "cmd": "add",
+        "interface": "ether4"
+      },
+      {
+        "cmd": "add",
+        "interface": "ether2",
+        "passive": "yes"
+      },
+      {
+        "cmd": "add",
+        "interface": "ether1"
+      },
+      {
+        "cmd": "add",
+        "interface": "ether3"
+      }
+    ],
+    "/routing rip neighbor": [
+      {
+        "cmd": "add",
+        "address": "192.168.0.2"
+      }
+    ],
+    "/routing rip network": [
+      {
+        "cmd": "add",
+        "network": "172.16.0.0/24"
+      },
+      {
+        "cmd": "add",
+        "network": "192.168.0.0/30"
+      },
+      {
+        "cmd": "add",
+        "network": "10.0.20.0/24"
+      },
+      {
+        "cmd": "add",
+        "network": "10.0.30.0/24"
+      }
+    ],
+    "/system identity": [
+      {
+        "cmd": "set",
+        "name": "Router1"
+      }
+    ]
+  }
+}

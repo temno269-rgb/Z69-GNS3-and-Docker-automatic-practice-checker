@@ -1,0 +1,163 @@
+{
+  "export": {
+    "/interface ethernet": [
+      {
+        "cmd": "set",
+        "default-name": "ether1",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether2",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether3",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether4",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether5",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether6",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether7",
+        "disable-running-check": "no"
+      },
+      {
+        "cmd": "set",
+        "default-name": "ether8",
+        "disable-running-check": "no"
+      }
+    ],
+    "/interface wireless security-profiles": [
+      {
+        "cmd": "set",
+        "default": "yes",
+        "supplicant-identity": "MikroTik"
+      }
+    ],
+    "/ip pool": [
+      {
+        "cmd": "add",
+        "name": "pool1",
+        "ranges": "10.1.0.1-10.1.63.253"
+      },
+      {
+        "cmd": "add",
+        "name": "pool2",
+        "ranges": "10.2.0.1-10.2.63.253"
+      },
+      {
+        "cmd": "add",
+        "name": "pool3",
+        "ranges": "10.3.0.1-10.3.63.253"
+      },
+      {
+        "cmd": "add",
+        "name": "pool4",
+        "ranges": "10.4.0.1-10.4.63.253"
+      }
+    ],
+    "/ip dhcp-server": [
+      {
+        "cmd": "add",
+        "address-pool": "pool1",
+        "disabled": "no",
+        "interface": "ether1",
+        "name": "dhcp1",
+        "relay": "\\"
+      },
+      {
+        "cmd": "10.1.63.254"
+      },
+      {
+        "cmd": "add",
+        "address-pool": "pool2",
+        "disabled": "no",
+        "interface": "ether1",
+        "name": "dhcp2",
+        "relay": "\\"
+      },
+      {
+        "cmd": "10.2.63.254"
+      },
+      {
+        "cmd": "add",
+        "address-pool": "pool3",
+        "disabled": "no",
+        "interface": "ether1",
+        "name": "dhcp3",
+        "relay": "\\"
+      },
+      {
+        "cmd": "10.3.63.254"
+      },
+      {
+        "cmd": "add",
+        "address-pool": "pool4",
+        "disabled": "no",
+        "interface": "ether1",
+        "name": "dhcp4"
+      }
+    ],
+    "/ip address": [
+      {
+        "cmd": "add",
+        "address": "10.4.0.1/18",
+        "interface": "ether1",
+        "network": "10.4.0.0"
+      }
+    ],
+    "/ip dhcp-server network": [
+      {
+        "cmd": "add",
+        "address": "10.1.0.0/18",
+        "dns-server": "8.8.8.8,8.8.4.4",
+        "gateway": "10.1.63.254"
+      },
+      {
+        "cmd": "add",
+        "address": "10.2.0.0/18",
+        "dns-server": "8.8.8.8,8.8.4.4",
+        "gateway": "10.2.63.254"
+      },
+      {
+        "cmd": "add",
+        "address": "10.3.0.0/18",
+        "dns-server": "8.8.8.8,8.8.4.4",
+        "gateway": "10.3.63.254"
+      },
+      {
+        "cmd": "add",
+        "address": "10.4.0.0/18",
+        "dns-server": "8.8.8.8,8.8.4.4",
+        "gateway": "10.4.63.254"
+      }
+    ],
+    "/ip dns": [
+      {
+        "cmd": "set",
+        "servers": "8.8.8.8,8.8.4.4"
+      }
+    ],
+    "/system identity": [
+      {
+        "cmd": "set",
+        "name": "DHCPServer"
+      }
+    ]
+  }
+}

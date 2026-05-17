@@ -1,0 +1,29 @@
+import docker
+import subprocess
+import os
+
+def check_environment():
+    """Проверяет готовность системы к проверке NetworkTech."""
+    report = {"docker": False, "wsl": False, "ready": False}
+    
+    # 1. Проверка Docker
+    try:
+        client = docker.from_env()
+        client.ping()
+        report["docker"] = True
+    except:
+        pass
+        
+    # 2. Проверка WSL (если Windows)
+    if os.name == 'nt':
+        try:
+            res = subprocess.run(["wsl", "--list", "--running"], capture_output=True)
+            if res.returncode == 0:
+                report["wsl"] = True
+        except:
+            pass
+    else:
+        report["wsl"] = True # На Linux WSL не нужен
+        
+    report["ready"] = report["docker"] and report["wsl"]
+    return report
