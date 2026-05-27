@@ -1,0 +1,7 @@
+PyQt5
+docker
+requests
+PyYAML
+gns3fy
+telnetlib3
+pyinstaller

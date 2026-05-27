@@ -1,1 +1,7 @@
-﻿.venv/
+.venv/
+INSTRUCTIONS.md
+build/
+dist/
+*.exe
+__pycache__/
+*.spec

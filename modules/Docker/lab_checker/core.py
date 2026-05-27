@@ -91,13 +91,21 @@ class LabChecker:
 
         self.log(f"Выполнение команды: {' '.join(cmd)}", "DEBUG")
         
+        # Настраиваем аргументы для скрытия всплывающих окон консоли в Windows
+        kwargs = {
+            'cwd': work_dir,
+            'capture_output': True,
+            'text': True,
+            'check': False
+        }
+        
+        if os.name == 'nt':
+            # CREATE_NO_WINDOW = 0x08000000
+            kwargs['creationflags'] = 0x08000000
+
         try:
             result = subprocess.run(
-                cmd,
-                cwd=work_dir,
-                capture_output=True,
-                text=True,
-                check=False
+                cmd, **kwargs
             )
             return result.returncode, result.stdout.strip(), result.stderr.strip()
         except Exception as e:

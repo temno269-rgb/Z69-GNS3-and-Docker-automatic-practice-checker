@@ -1,0 +1,9 @@
+version: '3.9'
+
+services:
+    flask-hello:
+        build: .
+        image: flask-hello:latest
+        restart: always
+        ports:
+        - 2020:2020

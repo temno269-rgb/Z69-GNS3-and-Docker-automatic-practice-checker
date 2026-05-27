@@ -1,6 +1,6 @@
 import docker
 import subprocess
-
+import os
 def check_environment():
     """Проверяет готовность системы к проверке NetworkTech."""
     report = {"docker": False, "wsl": False, "ready": False}

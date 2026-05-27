@@ -668,93 +668,62 @@ class MainWindow(QMainWindow):
         th.start()
 
     def _run_docker_backend(self):
-        import subprocess
-        import json
-        import sys
-        import os
-        import time
         import threading
         from modules.Docker.backend_bridge import get_config
         
         config = get_config()
         lab_type = config.get('lab', 'lab10')
-        auto_checker_path = os.path.join(project_root, "modules", "Docker", "auto_checker.py")
+        project_path = config.get('project_path')
         
-        if not os.path.exists(auto_checker_path):
-            self.log_message_signal.emit("docker", f"ERROR: Checker not found at {auto_checker_path}", "ERROR")
+        if not project_path:
+            self.log_message_signal.emit("docker", "ERROR: Please set a valid Docker project folder first (use Folder icon).", "ERROR")
             return
             
-        cmd = [sys.executable, auto_checker_path, "--lab", lab_type, "--dir", config.get('project_path'), "--silent"]
-        
         self.docker_progress_state_signal.emit(1, "Подготовка...")
 
-        try:
-            env = os.environ.copy()
-            env["PYTHONIOENCODING"] = "utf-8"
-            process = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8', errors='replace', env=env, bufsize=1
-            )
+        def check_thread():
+            import sys
+            import json
+            from modules.Docker.api import check_lab_dir
             
-            stderr_lines = []
-            def read_stderr():
-                for eline in iter(process.stderr.readline, ''):
-                    if eline:
-                        stderr_lines.append(eline.strip())
+            # Перехватчик для получения логов прогресса напрямую из памяти
+            class StdoutInterceptor:
+                def __init__(self, original_stdout, ui_instance):
+                    self.original_stdout = original_stdout
+                    self.ui = ui_instance
+                    self.buffer = ""
 
-            err_thread = threading.Thread(target=read_stderr, daemon=True)
-            err_thread.start()
-            stdout_lines = []
-            start_time = time.time()
-            
-            def check_timeout():
-                if time.time() - start_time > 300:
-                    process.kill()
-                    return True
-                return False
+                def write(self, text):
+                    self.buffer += text
+                    if '\n' in self.buffer:
+                        lines = self.buffer.split('\n')
+                        for line in lines[:-1]:
+                            line = line.strip()
+                            if line.startswith('{"type": "progress_log"'):
+                                try:
+                                    log_data = json.loads(line)
+                                    self.ui.docker_progress_msg_signal.emit(log_data.get("message", ""))
+                                except Exception:
+                                    pass
+                            elif line and not line.startswith('{'):
+                                self.ui.log_message_signal.emit("docker", line, "INFO")
+                        self.buffer = lines[-1]
 
-            while True:
-                if check_timeout():
-                    break
-                line = process.stdout.readline()
-                if not line:
-                    if process.poll() is not None:
-                        break
-                    time.sleep(0.05)
-                    continue
-                    
-                line_str = line.strip()
-                if not line_str:
-                    continue
-                    
-                if line_str.startswith('{"type": "progress_log"'):
-                    try:
-                        log_data = json.loads(line_str)
-                        self.docker_progress_msg_signal.emit(log_data.get("message", ""))
-                    except Exception:
-                        pass
-                else:
-                    stdout_lines.append(line_str)
+                def flush(self):
+                    self.original_stdout.flush()
             
-            err_thread.join(timeout=1)
-            stderr = "\n".join(stderr_lines)
-            stdout = "\n".join(stdout_lines)
+            old_stdout = sys.stdout
+            sys.stdout = StdoutInterceptor(old_stdout, self)
             
-            self.docker_progress_state_signal.emit(0, "")
-            
-            if time.time() - start_time > 300:
-                self.log_message_signal.emit("docker", "CRITICAL ERROR: Docker check timed out (5 minutes limit) and was forcefully aborted.", "ERROR")
-                return
-
-            if stderr:
-                self.log_message_signal.emit("docker", f"Warning/Error: {stderr.strip()}", "ERROR")
-                
-            if not stdout:
-                if not stderr:
-                    self.log_message_signal.emit("docker", "ERROR: Checker script finished silently with no output.", "ERROR")
-                return
-
             try:
-                result = json.loads(stdout)
+                # Напрямую вызываем функцию проверки
+                result = check_lab_dir(
+                    project_dir=project_path, 
+                    lab_type=lab_type, 
+                    silent_mode=True
+                )
+                
+                self.docker_progress_state_signal.emit(0, "")
                 
                 if not result.get("success", True):
                     self.log_message_signal.emit("docker", f"Error: {result.get('error', 'Unknown error')}", "ERROR")
@@ -772,13 +741,14 @@ class MainWindow(QMainWindow):
                 self.log_message_signal.emit("docker", f"Total: {summary.get('total_checks', 0)} | Passed: {summary.get('passed_checks', 0)} | Failed: {summary.get('failed_checks', 0)}", "INFO")
                 self.log_message_signal.emit("docker", f"Success Rate: {summary.get('success_rate', '0%')}", "INFO")
                 
-            except json.JSONDecodeError:
-                self.log_message_signal.emit("docker", "Failed to parse checker output. Raw output:", "ERROR")
-                self.log_message_signal.emit("docker", stdout.strip(), "INFO")
-                
-        except Exception as e:
-            self.docker_progress_state_signal.emit(0, "")
-            self.log_message_signal.emit("docker", f"Failed to execute Docker checker: {e}", "ERROR")
+            except Exception as e:
+                self.docker_progress_state_signal.emit(0, "")
+                self.log_message_signal.emit("docker", f"Failed to execute Docker checker: {e}", "ERROR")
+            finally:
+                sys.stdout = old_stdout
+
+        # Запускаем проверку в фоновом потоке
+        threading.Thread(target=check_thread, daemon=True).start()
 
     def _show_startup_info(self, target_console):
         """Displays configuration information when console starts"""
