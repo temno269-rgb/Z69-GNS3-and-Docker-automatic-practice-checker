@@ -4,6 +4,7 @@ import sys
 import os
 import time
 import subprocess
+import shutil
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from .types import LabType, CheckResult
@@ -18,6 +19,8 @@ class LabChecker:
         self.config = config
         self.silent_mode = config.general.silent_mode
         self.project_dir = None
+        self.active_compose_file = None
+        self.active_compose_project = None
         
         self.execution_logs = []
         
@@ -80,7 +83,8 @@ class LabChecker:
         status = "УСПЕХ" if passed else "НЕУДАЧА"
         self.log(f"[{status}] {name}: {message}", level=log_level)
 
-    def run_subprocess(self, cmd: List[str], cwd: Optional[str] = None) -> Tuple[int, str, str]:
+    def run_subprocess(self, cmd: List[str], cwd: Optional[str] = None,
+                       timeout: Optional[int] = None) -> Tuple[int, str, str]:
         """
         Безопасное выполнение консольных команд через subprocess.
         cwd по умолчанию — текущая папка проекта.
@@ -105,22 +109,50 @@ class LabChecker:
 
         try:
             result = subprocess.run(
-                cmd, **kwargs
+                cmd,
+                timeout=timeout or self.config.general.max_execution_time,
+                **kwargs
             )
             return result.returncode, result.stdout.strip(), result.stderr.strip()
+        except subprocess.TimeoutExpired as e:
+            self.log(f"Команда превысила тайм-аут: {' '.join(cmd)}", "ERROR")
+            stdout = (e.stdout or "").strip() if isinstance(e.stdout, str) else ""
+            stderr = (e.stderr or "").strip() if isinstance(e.stderr, str) else ""
+            return -1, stdout, stderr or "Превышен тайм-аут выполнения команды"
         except Exception as e:
             self.log(f"Ошибка при вызове subprocess: {str(e)}", "ERROR")
             return -1, "", str(e)
+
+    def get_compose_command(self) -> Optional[List[str]]:
+        """Возвращает доступную команду Compose, включая версию 1 из 2021 года."""
+        if shutil.which("docker-compose"):
+            return ["docker-compose"]
+        if shutil.which("docker"):
+            code, _, _ = self.run_subprocess(["docker", "compose", "version"], timeout=10)
+            if code == 0:
+                return ["docker", "compose"]
+        return None
 
     def cleanup(self):
         """
         Очистка ресурсов Docker. 
         ВНИМАНИЕ: Удаление папок (shutil.rmtree) отключено для безопасности локальных данных.
         """
-        if self.project_dir and os.path.exists(self.project_dir):
+        compose_names = ("compose.yaml", "compose.yml", "docker-compose.yaml", "docker-compose.yml")
+        has_compose = self.project_dir and any(
+            os.path.isfile(os.path.join(self.project_dir, name)) for name in compose_names
+        )
+        if has_compose and self.active_compose_file:
             self.log("Завершение: остановка контейнеров...", "INFO")
-            # Мягко останавливаем compose проект и удаляем тома
-            self.run_subprocess(["docker-compose", "down", "-v"])
+            compose_cmd = self.get_compose_command()
+            if compose_cmd:
+                # Тома студента не удаляем: down -v может уничтожить результаты работы.
+                compose_args = compose_cmd
+                if self.active_compose_project:
+                    compose_args = compose_args + ["-p", self.active_compose_project]
+                if self.active_compose_file:
+                    compose_args = compose_args + ["-f", self.active_compose_file]
+                self.run_subprocess(compose_args + ["down", "--remove-orphans"], timeout=60)
 
     def get_results_json(self) -> Dict:
         """Формирование итогового JSON отчета."""
@@ -163,6 +195,8 @@ class LabChecker:
         self.results = []
         self.project_dir = os.path.abspath(project_path)
         self.lab_type = lab_type
+        self.active_compose_file = None
+        self.active_compose_project = None
         
         self.log(f"Начало проверки: {lab_type.value}. Директория: {self.project_dir}", "INFO")
         

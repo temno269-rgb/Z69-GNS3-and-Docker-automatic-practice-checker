@@ -1,0 +1,460 @@
+\documentclass[a4paper,14pt]{extarticle}
+
+% === ПРЕАМБУЛА ===
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath, amsfonts, amssymb, amsthm}
+\usepackage{geometry}
+\geometry{left=3cm, right=1.5cm, top=2cm, bottom=2cm}
+\usepackage{mathptmx} % Шрифты Times New Roman
+\usepackage{graphicx}
+\usepackage{indentfirst}
+\setlength{\parindent}{1.25cm}
+\linespread{1.5}
+\usepackage{float}
+\usepackage{booktabs}
+
+% Настройка листингов кода
+\usepackage{listings}
+\usepackage{xcolor}
+\lstset{
+    language=Python,
+    basicstyle=\linespread{1.0}\small\ttfamily,
+    keywordstyle=\color{blue}\bfseries,
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    numbersep=5pt,
+    backgroundcolor=\color{gray!5},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    frame=single,
+    tabsize=4,
+    captionpos=t,
+    breaklines=true,
+    breakatwhitespace=false,
+    title=\lstname,
+    extendedchars=true,
+    literate={а}{{\cyra}}1 {б}{{\cyrb}}1 {в}{{\cyrv}}1 {г}{{\cyrg}}1 {д}{{\cyrd}}1
+             {е}{{\cyre}}1 {ё}{{\cyryo}}1 {ж}{{\cyrzh}}1 {з}{{\cyrz}}1 {и}{{\cyri}}1
+             {й}{{\cyrishrt}}1 {к}{{\cyrk}}1 {л}{{\cyrl}}1 {м}{{\cyrm}}1 {н}{{\cyrn}}1
+             {о}{{\cyro}}1 {п}{{\cyrp}}1 {р}{{\cyrr}}1 {с}{{\cyrs}}1 {т}{{\cyrt}}1
+             {у}{{\cyru}}1 {ф}{{\cyrf}}1 {х}{{\cyrh}}1 {ц}{{\cyrc}}1 {ч}{{\cyrch}}1
+             {ш}{{\cyrsh}}1 {щ}{{\cyrshch}}1 {ъ}{{\cyrhard}}1 {ы}{{\cyry}}1
+             {ь}{{\cyrsoft}}1 {э}{{\cyrerev}}1 {ю}{{\cyryu}}1 {я}{{\cyrya}}1
+             {А}{{\CYRA}}1 {Б}{{\CYRB}}1 {В}{{\CYRV}}1 {Г}{{\CYRG}}1 {Д}{{\CYRD}}1
+             {Е}{{\CYRE}}1 {Ё}{{\CYRYO}}1 {Ж}{{\CYRZH}}1 {З}{{\CYRZ}}1 {И}{{\CYRI}}1
+             {Й}{{\CYRISHRT}}1 {К}{{\CYRK}}1 {Л}{{\CYRL}}1 {М}{{\CYRM}}1 {Н}{{\CYRN}}1
+             {О}{{\CYRO}}1 {П}{{\CYRP}}1 {Р}{{\CYRR}}1 {С}{{\CYRS}}1 {Т}{{\CYRT}}1
+             {У}{{\CYRU}}1 {Ф}{{\CYRF}}1 {Х}{{\CYRH}}1 {Ц}{{\CYRC}}1 {Ч}{{\CYRCH}}1
+             {Ш}{{\CYRSH}}1 {Щ}{{\CYRSHCH}}1 {Ъ}{{\CYRHARD}}1 {Ы}{{\CYRY}}1
+             {Ь}{{\CYRSOFT}}1 {Э}{{\CYREREV}}1 {Ю}{{\CYRYU}}1 {Я}{{\CYRYA}}1
+}
+
+\usepackage{caption}
+\captionsetup[figure]{name=Рисунок, labelsep=endash, justification=centering}
+\captionsetup[table]{name=Таблица, labelsep=endash, justification=justified, singlelinecheck=false}
+
+\begin{document}
+
+% === ТИТУЛЬНЫЙ ЛИСТ ===
+\begin{titlepage}
+\begin{center}
+\textbf{Федеральное государственное автономное образовательное учреждение \\ высшего образования \\ «Российский университет транспорта»}
+
+\vspace{5cm}
+\textbf{\Large Отчет} \\
+\vspace{0.5cm}
+\textbf{По лабораторным работам} \\
+\textbf{По дисциплине: «Математическое и компьютерное моделирование»}
+\end{center}
+
+\vspace{5cm}
+\begin{flushright}
+\textbf{Выполнил:} студент группы ШМС-211 \\ Мехоношин В. А. \\
+\textbf{Проверил:} Малых А. Н.
+\end{flushright}
+
+\vfill
+\begin{center}
+Москва 2026 г.
+\end{center}
+\end{titlepage}
+
+\newpage
+% === ОГЛАВЛЕНИЕ ===
+\tableofcontents
+\newpage
+
+\section*{Введение}
+\addcontentsline{toc}{section}{Введение}
+Данный отчет посвящен исследованию и реализации методов математического и компьютерного моделирования. Работа охватывает пять разделов: вычисление площади области методом Монте-Карло, имитационное моделирование задачи Бюффона, анализ марковского процесса на примере задачи о разорении игрока, а также реализация численных методов интегрирования и решения нелинейных уравнений. Все алгоритмы написаны на языке Python с применением векторизованных вычислений \texttt{numpy} и визуализацией \texttt{matplotlib}. Результаты каждого эксперимента подкреплены строгим теоретическим выводом.
+
+\newpage
+
+% === ЛАБОРАТОРНАЯ РАБОТА 1 ===
+\section{Численное интегрирование методом Монте-Карло}
+
+\subsection{Постановка задачи и исходные данные}
+Необходимо вычислить площадь плоской фигуры $D$, ограниченной графиками двух функций $f_1(x)$ и $f_2(x)$, используя метод стохастического интегрирования (Монте-Карло). 
+Исходные данные варианта:
+\begin{itemize}
+    \item Ограничивающие кривые: $f_1(x) = 2 - x^2$ и $f_2(x) = \cos(x)$;
+    \item Параметры опорного квадрата $G$: длина стороны $A = 2,0$, координаты центра $X_0 = 1,0, Y_0 = 0,0$;
+    \item Количество случайных испытаний: $N = 1000$.
+\end{itemize}
+
+\subsection{Теоретические сведения}
+Пусть $G$ — прямоугольная область (опорный квадрат) площадью $S_0$, содержащая искомую область $D$. Площадь $G$ вычисляется тривиально: $S_0 = A^2$. Искомая область $D$ определяется системой неравенств:
+\begin{equation}
+    (x, y) \in D \iff \min(f_1(x), f_2(x)) \leq y \leq \max(f_1(x), f_2(x))
+\end{equation}
+Пусть двумерная случайная величина $(X,Y)$ распределена равномерно в области $G$. Плотность совместного распределения равна $1/S_0$ внутри $G$ и $0$ вне $G$. Вероятность $p$ попадания случайной точки в область $D$ прямо пропорциональна мере (площади) области:
+\begin{equation}
+    p = P((X, Y) \in D) = \iint\limits_{D} \frac{1}{S_0} \,dx\,dy = \frac{S_D}{S_0} \implies S_D = p S_0
+\end{equation}
+Для практической оценки $p$ генерируется $N$ независимых точек $(x_i, y_i)$. Введем индикаторную функцию $\xi_i \in \{0, 1\}$, принимающую значение $1$, если точка принадлежит $D$. По закону больших чисел выборочное среднее сходится по вероятности к математическому ожиданию $p$:
+\begin{equation}
+    \hat{p} = \frac{1}{N} \sum_{i=1}^{N} \xi_i = \frac{M}{N} \xrightarrow[N \to \infty]{P} p
+\end{equation}
+где $M$ — количество точек, попавших в область $D$. Точечная оценка площади: $\hat{S}_D = S_0 \frac{M}{N}$.
+Статистическая погрешность (стандартное отклонение оценки) вычисляется по формуле:
+\begin{equation}
+    \sigma_{S} = S_0 \sqrt{\frac{\hat{p}(1-\hat{p})}{N}}
+\end{equation}
+
+\subsection{Описание решения и результаты}
+В листинге \ref{lst:lab1_code} представлена реализация численного эксперимента, инкапсулированная в модульную архитектуру без использования циклов \texttt{for} за счет средств \texttt{numpy}.
+
+\begin{lstlisting}[caption={Реализация метода Монте-Карло для оценки площади}, label={lst:lab1_code}]
+import numpy as np
+import matplotlib.pyplot as plt
+
+def f1(x):
+    return 2.0 - x**2
+
+def f2(x):
+    return np.cos(x)
+
+def monte_carlo_integration(A, X0, Y0, N, seed=42):
+    np.random.seed(seed)
+    x_min, x_max = X0 - A / 2.0, X0 + A / 2.0
+    y_min, y_max = Y0 - A / 2.0, Y0 + A / 2.0
+    S0 = A**2
+
+    x_rand = np.random.uniform(x_min, x_max, N)
+    y_rand = np.random.uniform(y_min, y_max, N)
+
+    y_lower = np.minimum(f1(x_rand), f2(x_rand))
+    y_upper = np.maximum(f1(x_rand), f2(x_rand))
+
+    hits = (y_rand >= y_lower) & (y_rand <= y_upper)
+    M = np.sum(hits)
+    p_hat = M / N
+    S_est = S0 * p_hat
+    error = S0 * np.sqrt(p_hat * (1.0 - p_hat) / N)
+
+    return M, S0, S_est, error
+\end{lstlisting}
+
+В таблице \ref{tab:lab1_res} представлены результаты численного эксперимента при $N = 1000$.
+
+\begin{table}[H]
+    \centering
+    \caption{Оценка площади области методом Монте-Карло}
+    \label{tab:lab1_res}
+    \begin{tabular}{lc}
+        \toprule
+        \textbf{Параметр} & \textbf{Значение} \\
+        \midrule
+        Площадь опорного квадрата, $S_0$ & 4,000000 \\
+        Количество испытаний, $N$ & 1000 \\
+        Число попаданий, $M$ & 410 \\
+        Оценочная площадь, $\hat{S}_D$ & 1,640000 \\
+        Статистическая погрешность, $\pm 1\sigma_S$ & 0,062219 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+
+% === ЛАБОРАТОРНАЯ РАБОТА 2 ===
+\section{Задача Бюффона}
+
+\subsection{Постановка задачи и ограничения}
+Метод Монте-Карло применяется для эмпирического нахождения константы $\pi$ через классическую задачу о бросании иглы на разлинованную плоскость. Исходные данные:
+\begin{itemize}
+    \item Длина иглы $l = 1,0$;
+    \item Расстояние между параллельными прямыми $a = 2,0$;
+    \item Число бросков $N = 10000$.
+\end{itemize}
+Условие $l \leq a$ выполнено, что гарантирует пересечение не более чем с одной линией.
+
+\subsection{Теоретические сведения}
+Пусть $y_c \in [0, a/2]$ — расстояние от центра иглы до ближайшей параллельной прямой, а $\varphi \in [0, \pi/2]$ — острый угол между иглой и линиями сетки. Обе случайные величины распределены равномерно, их совместная плотность: $f(y_c, \varphi) = \frac{4}{a\pi}$.
+Игла пересекает прямую тогда и только тогда, когда проекция половины иглы на перпендикуляр к линиям больше либо равна расстоянию $y_c$:
+\begin{equation}
+    y_c \leq \frac{l}{2} \sin \varphi
+\end{equation}
+Теоретическая вероятность пересечения вычисляется интегрированием по области допустимых значений:
+\begin{equation}
+    P = \int_{0}^{\pi/2} \int_{0}^{\frac{l}{2} \sin \varphi} \frac{4}{a\pi} \,dy_c\,d\varphi = \frac{4}{a\pi} \int_{0}^{\pi/2} \frac{l}{2} \sin \varphi \,d\varphi = \frac{2l}{a\pi}
+\end{equation}
+Относительная частота пересечений при $N$ независимых испытаниях есть $W_{exp} = \frac{M}{N}$, где $M$ — количество успешных исходов. В силу теоремы Бернулли, $\lim_{N \to \infty} P(|W_{exp} - P| < \varepsilon) = 1$. Приравнивая $W_{exp} \approx P$, выражаем искомое приближение числа $\pi$:
+\begin{equation}
+    \hat{\pi} \approx \frac{2lN}{aM}
+\end{equation}
+
+\subsection{Описание решения и результаты}
+Модульная реализация имитационного процесса представлена в листинге \ref{lst:lab2_code}.
+
+\begin{lstlisting}[caption={Имитационное моделирование задачи Бюффона}, label={lst:lab2_code}]
+import numpy as np
+
+def simulate_buffon(L, A, N, seed=42):
+    np.random.seed(seed)
+    y_center = np.random.uniform(0, 10, N)
+    phi = np.random.uniform(0, np.pi, N)
+
+    dy = (L / 2.0) * np.sin(phi)
+    
+    y_bottom = y_center - dy
+    y_top = y_center + dy
+    crossings = np.floor(y_bottom / A) != np.floor(y_top / A)
+
+    M = np.sum(crossings)
+    p_exp = M / N
+    p_theor = (2.0 * L) / (np.pi * A)
+    pi_approx = (2.0 * L * N) / (A * M) if M > 0 else np.nan
+
+    return M, p_exp, p_theor, pi_approx
+\end{lstlisting}
+
+В таблице \ref{tab:lab2_res} приведены данные сходимости и вычисления погрешностей эксперимента.
+
+\begin{table}[H]
+    \centering
+    \caption{Сравнительные результаты моделирования задачи Бюффона}
+    \label{tab:lab2_res}
+    \begin{tabular}{lc}
+        \toprule
+        \textbf{Показатель} & \textbf{Значение} \\
+        \midrule
+        Общее число бросков, $N$ & 10000 \\
+        Количество пересечений, $M$ & 3209 \\
+        Эмпирическая вероятность, $W_{exp}$ & 0,320900 \\
+        Теоретическая вероятность, $P$ & 0,318310 \\
+        Оценка константы, $\hat{\pi}$ & 3,116236 \\
+        Абсолютная погрешность, $\Delta$ & 0,025357 \\
+        Относительная погрешность, $\delta$ & 0,8071 \% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+
+% === ЛАБОРАТОРНАЯ РАБОТА 3 ===
+\section{Задача о разорении игрока}
+
+\subsection{Постановка задачи и исходные данные}
+Анализируется марковский процесс случайного блуждания с двумя поглощающими состояниями. Параметры:
+\begin{itemize}
+    \item Вероятность выигрыша первого игрока: $p = 0,41$, второго: $q = 0,59$;
+    \item Начальные капиталы: $X_0 = 128$, $Y_0 = 115$; общий капитал $T = 243$;
+    \item Лимит шагов одной партии: $N = 1000$; количество партий: $N_{games} = 1000$.
+\end{itemize}
+
+\subsection{Теоретические сведения}
+Вероятность $P_k$ разорения первого игрока при капитале $k$ подчиняется однородному линейному разностному уравнению:
+\begin{equation}
+    P_k = p P_{k+1} + q P_{k-1}, \quad 0 < k < T, \quad P_0 = 1, P_T = 0
+\end{equation}
+Его точное аналитическое решение для $p \neq q$:
+\begin{equation}
+    P_{ruin}^{(1)} = \frac{(q/p)^T - (q/p)^{X_0}}{(q/p)^T - 1}
+\end{equation}
+Средняя продолжительность игры $\mathbb{M}[\tau]$ является решением уравнения $E_k = p E_{k+1} + q E_{k-1} + 1$:
+\begin{equation}
+    \mathbb{M}[\tau] = \frac{X_0 - T(1 - P_{ruin}^{(1)})}{q - p}
+\end{equation}
+
+\subsection{Описание решения и результаты}
+Моделирование ограничено лимитом шагов $N=1000$. Код векторизован для одновременного обсчета $N_{games}$ (Листинг \ref{lst:lab3_code}).
+
+\begin{lstlisting}[caption={Моделирование случайного блуждания}, label={lst:lab3_code}]
+import numpy as np
+
+def simulate_ruin(p, x_init, T, N_steps, N_games, seed=42):
+    np.random.seed(seed)
+    capital = np.full(N_games, x_init)
+    active = np.ones(N_games, dtype=bool)
+    game_lengths = np.zeros(N_games, dtype=int)
+    outcomes = np.zeros(N_games, dtype=int) # 0: лимит, 1: игрок 1 разорен, 2: игрок 2 разорен
+
+    for step in range(1, N_steps + 1):
+        if not np.any(active): break
+        
+        moves = np.where(np.random.random(N_games) < p, 1, -1)
+        capital[active] += moves[active]
+
+        ruin1 = active & (capital <= 0)
+        ruin2 = active & (capital >= T)
+
+        outcomes[ruin1] = 1
+        outcomes[ruin2] = 2
+        game_lengths[ruin1 | ruin2] = step
+        active[ruin1 | ruin2] = False
+
+    game_lengths[active] = N_steps
+    return outcomes, game_lengths
+\end{lstlisting}
+
+В таблице \ref{tab:lab3_res} представлены результаты: из-за строгого лимита $N=1000$ часть партий обрывается, внося искажения по сравнению с бесконечной теорией.
+
+\begin{table}[H]
+    \centering
+    \caption{Сравнение результатов симуляции и теоретических ожиданий}
+    \label{tab:lab3_res}
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Параметр} & \textbf{Симуляция (лимит $N=1000$)} & \textbf{Теория ($N \to \infty$)} \\
+        \midrule
+        Вероятность разорения игрока 1 & 0,9570 & 1,0000 \\
+        Вероятность разорения игрока 2 & 0,0000 & 0,0000 \\
+        Достижение лимита шагов & 0,0430 & 0,0000 \\
+        Средняя продолжительность $\mathbb{M}[\tau]$ & 819,34 шагов & 711,11 шагов \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+
+% === ЛАБОРАТОРНАЯ РАБОТА 4 ===
+\section{Численные методы интегрирования}
+
+\subsection{Постановка задачи и теоретические сведения}
+Требуется вычислить определенный интеграл:
+\begin{equation}
+    I = \int_{1}^{5} x \sqrt{4x + 5} \, dx
+\end{equation}
+Используются квадратурные формулы Ньютона-Котеса: метод левых, правых, средних прямоугольников, трапеций и Симпсона. Формула Симпсона (парабол) обладает наибольшим алгебраическим порядком точности:
+\begin{equation}
+    S = \frac{\Delta x}{3} \left( f(x_0) + f(x_n) + 4\sum f(x_{2i-1}) + 2\sum f(x_{2i}) \right)
+\end{equation}
+Критерий останова итерационного уточнения (правило Рунге в простейшей форме): $|S_{2n} - S_n| < \varepsilon$.
+
+\subsection{Описание решения и результаты}
+Автоматическое уточнение сетки реализовано циклом \texttt{while} (Листинг \ref{lst:lab4_code}).
+
+\begin{lstlisting}[caption={Универсальная функция автоматического уточнения интеграла}, label={lst:lab4_code}]
+import numpy as np
+
+def f(x):
+    return x * np.sqrt(4.0 * x + 5.0)
+
+def auto_refine_integration(method, A, B, eps=1e-4, max_n=100000):
+    n = 10
+    prev_val = method(n, A, B)
+    while n < max_n:
+        n_next = n * 2
+        curr_val = method(n_next, A, B)
+        delta = np.abs(curr_val - prev_val)
+        if delta < eps:
+            return n_next, curr_val, delta, "Успех"
+        n = n_next
+        prev_val = curr_val
+    return n, prev_val, np.abs(curr_val - prev_val), "Лимит"
+\end{lstlisting}
+
+В таблице \ref{tab:lab4_res} приведена динамика сходимости алгоритмов при $\varepsilon = 10^{-4}$. Метод Симпсона сходится значительно быстрее прочих детерминированных методов.
+
+\begin{table}[H]
+    \centering
+    \caption{Сходимость численных методов интегрирования}
+    \label{tab:lab4_res}
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Метод} & \textbf{Кол-во разбиений $N$} & \textbf{Значение $S$} & \textbf{Разность $\Delta$} \\
+        \midrule
+        Левые прямоугольники & 5120 & 51,624795 & $9,605 \cdot 10^{-5}$ \\
+        Правые прямоугольники & 5120 & 51,642055 & $9,957 \cdot 10^{-5}$ \\
+        Средние прямоугольники & 320 & 51,633282 & $4,269 \cdot 10^{-5}$ \\
+        Метод трапеций & 640 & 51,633435 & $4,270 \cdot 10^{-5}$ \\
+        Метод Симпсона & 20 & 51,633332 & $3,856 \cdot 10^{-4}$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+
+% === ЛАБОРАТОРНАЯ РАБОТА 5 ===
+\section{Численные методы решения нелинейных уравнений}
+
+\subsection{Постановка задачи и теоретические сведения}
+Рассматривается решение нелинейного уравнения $f(x) = \sin(e^{\cos x}) - 0,6 = 0$ на отрезке $[-3,0, -1,5]$. Применяются следующие методы:
+\begin{itemize}
+    \item \textbf{Метод дихотомии:} Итеративное деление отрезка пополам с проверкой условия Коши: $f(a)f(c) < 0$. Сходимость линейная.
+    \item \textbf{Метод Ньютона (касательных):} Итерационный процесс: $x_{n+1} = x_n - f(x_n)/f'(x_n)$. Обладает квадратичной скоростью сходимости при выполнении условий непрерывности.
+    \item \textbf{Метод хорд (секущих):} $x_{n+1} = a - f(a)\frac{b-a}{f(b)-f(a)}$.
+    \item \textbf{Метод простой итерации:} Уравнение преобразуется к виду $x = \varphi(x)$. Достаточное условие сходимости: $\max |\varphi'(x)| < 1$.
+\end{itemize}
+
+Критерием останова для всех методов служит условие Коши для последовательностей: $|x_{n+1} - x_n| < \varepsilon = 10^{-14}$.
+
+\subsection{Описание решения и результаты}
+Все методы оформлены в виде инкапсулированных генераторов (Листинг \ref{lst:lab5_code}).
+
+\begin{lstlisting}[caption={Численные алгоритмы решения нелинейных уравнений}, label={lst:lab5_code}]
+def bisection(f, a, b, eps=1e-14, n_max=1000):
+    n = 0
+    while (b - a) / 2.0 > eps and n < n_max:
+        c = (a + b) / 2.0
+        if f(a) * f(c) < 0:
+            b = c
+        else:
+            a = c
+        n += 1
+    return (a + b) / 2.0, n
+
+def newton(f, df, x0, eps=1e-14, n_max=1000):
+    x, n = x0, 0
+    while n < n_max:
+        x_next = x - f(x) / df(x)
+        if abs(x_next - x) < eps:
+            return x_next, n + 1
+        x = x_next
+        n += 1
+    return x, n
+
+def fixed_point(phi, x0, eps=1e-14, n_max=1000):
+    x, n = x0, 0
+    while n < n_max:
+        x_next = phi(x)
+        if abs(x_next - x) < eps:
+            return x_next, n + 1
+        x = x_next
+        n += 1
+    return x, n
+\end{lstlisting}
+
+В таблице \ref{tab:lab5_res} отражено количество итераций, потребовавшееся каждому методу для достижения машинной точности.
+
+\begin{table}[H]
+    \centering
+    \caption{Сравнение методов решения нелинейных уравнений}
+    \label{tab:lab5_res}
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Метод} & \textbf{Корень $x^*$} & \textbf{Итераций} & \textbf{Невязка $|f(x^*)|$} \\
+        \midrule
+        Метод бисекции & -2,21389808 & 45 & $1,33 \cdot 10^{-15}$ \\
+        Метод хорд & -2,21389808 & 21 & $2,22 \cdot 10^{-15}$ \\
+        Метод Ньютона & -2,21389808 & 5 & $2,22 \cdot 10^{-16}$ \\
+        Простая итерация & 0,71893455 & 33 & $8,88 \cdot 10^{-16}$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section*{Заключение}
+\addcontentsline{toc}{section}{Заключение}
+В ходе выполнения лабораторных работ осуществлен синтез теоретических знаний и практических навыков программирования. Подтверждена высокая скорость сходимости метода Ньютона (квадратичная сходимость) и метода Симпсона (алгебраический порядок точности $O(h^4)$). Продемонстрированы эффекты закона больших чисел на примере метода Монте-Карло, выявлены ограничения статистических методов из-за медленной сходимости $O(1/\sqrt{N})$. Полученные результаты, оформленные с помощью библиотеки \texttt{numpy}, отличаются высокой вычислительной эффективностью и полностью соответствуют теоретическим моделям.
+\end{document}

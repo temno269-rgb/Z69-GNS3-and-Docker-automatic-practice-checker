@@ -1,133 +1,183 @@
-import os
 import time
+
 import requests
-import yaml
+
+from modules.Docker.lab_checker.checkers.compose_runtime import ComposeRuntime
+from modules.Docker.lab_checker.checkers.lab11 import Lab11Checker
 from modules.Docker.lab_checker.core import LabChecker
+
 
 class Lab12Checker:
     def __init__(self, checker: LabChecker):
         self.checker = checker
+        self.session = requests.Session()
+        self.lab11_parser = Lab11Checker(checker)
 
     def check(self) -> bool:
-        """Проверка лабораторной работы №12: Docker Compose (Prometheus + Grafana)."""
+        """Проверяет обе части работы №12 через Compose и фактические сервисы."""
         if not self.checker.silent_mode:
             print("\n=== Проверка лабораторной работы №12 ===")
 
-        # 1. Ищем файл docker-compose
-        compose_file = None
-        for filename in ['docker-compose.yml', 'docker-compose.yaml']:
-            path = os.path.join(self.checker.project_dir, filename)
-            if os.path.exists(path):
-                compose_file = path
-                break
-                
-        if not compose_file:
-            self.checker.add_result("Наличие docker-compose", False, "Файл docker-compose.yml не найден в корне проекта")
+        runtime = ComposeRuntime(self.checker, "lab12")
+        if not runtime.file_name:
+            self.checker.add_result(
+                "Наличие Compose-файла", False,
+                "Ожидался compose.yaml/.yml или docker-compose.yaml/.yml",
+            )
             return False
-            
-        self.checker.add_result("Наличие docker-compose", True, f"Найден файл: {os.path.basename(compose_file)}")
-
-        # 2. Анализируем содержимое docker-compose.yml (ищем Prometheus и Grafana)
-        prom_port = None
-        grafana_port = None
-        
-        try:
-            with open(compose_file, 'r', encoding='utf-8') as f:
-                compose_data = yaml.safe_load(f)
-                
-            services = compose_data.get('services', {})
-            has_prometheus = False
-            has_grafana = False
-            
-            for service_name, service_config in services.items():
-                image = service_config.get('image', '').lower()
-                
-                # Ищем Prometheus
-                if 'prometheus' in image:
-                    has_prometheus = True
-                    prom_port = self._extract_host_port(service_config.get('ports', []), default=self.checker.config.lab12.expected_ports.get("prometheus", 9090))
-                    
-                # Ищем Grafana
-                if 'grafana' in image:
-                    has_grafana = True
-                    grafana_port = self._extract_host_port(service_config.get('ports', []), default=self.checker.config.lab12.expected_ports.get("grafana", 3000))
-
-            if has_prometheus and has_grafana:
-                self.checker.add_result("Структура docker-compose", True, "В файле обнаружены сервисы Prometheus и Grafana")
-            else:
-                missing = []
-                if not has_prometheus: missing.append("Prometheus")
-                if not has_grafana: missing.append("Grafana")
-                self.checker.add_result("Структура docker-compose", False, f"В файле не найдены образы для: {', '.join(missing)} (по заданию №2)")
-                # Не прерываем выполнение, попробуем запустить то, что есть (студент мог сделать только задание 1)
-                
-        except Exception as e:
-            self.checker.add_result("Анализ YAML", False, f"Ошибка при чтении docker-compose.yml: {str(e)}")
-
-        # 3. Запуск стека через docker-compose
-        self.checker.log("Поднимаем стек через docker-compose up -d...")
-        code, stdout, stderr = self.checker.run_subprocess(["docker-compose", "up", "-d"])
-        
-        if code != 0:
-            self.checker.add_result("Запуск проекта", False, f"Ошибка docker-compose up: {stderr}")
+        self.checker.add_result("Наличие Compose-файла", True, f"Найден {runtime.file_name}")
+        if not runtime.command:
+            self.checker.add_result("Docker Compose", False, "Не найдены docker-compose и docker compose")
             return False
-            
-        self.checker.add_result("Запуск проекта", True, "Стек успешно запущен")
 
-        # Даем тяжелым сервисам (Grafana) время на запуск базы данных и инициализацию
-        self.checker.log("Ожидание инициализации сервисов (10 секунд)...")
-        time.sleep(10)
+        valid, compose, error = runtime.config()
+        self.checker.add_result(
+            "Валидация Compose", valid,
+            "docker compose config выполнен успешно" if valid else error,
+        )
+        if not valid:
+            return False
 
-        # 4. Проверка состояния контейнеров
-        code, stdout, stderr = self.checker.run_subprocess(["docker-compose", "ps"])
-        if "Exit" in stdout or "restarting" in stdout.lower():
-            self.checker.add_result("Статус контейнеров", False, "Некоторые контейнеры упали или постоянно перезапускаются (CrashLoop)")
-        else:
-            self.checker.add_result("Статус контейнеров", True, "Все контейнеры стабильно работают (Up)")
+        services = compose.get("services", {}) or {}
+        roles = self._find_roles(services)
+        app_services = [name for name in services if name not in set(roles.values())]
+        self.checker.add_result(
+            "Программа из лабораторной №11", bool(app_services),
+            f"Сервисы приложения: {', '.join(app_services)}"
+            if app_services else "Не найден отдельный сервис программы из №11",
+        )
+        missing = [role for role in ("prometheus", "grafana") if role not in roles]
+        self.checker.add_result(
+            "Prometheus и Grafana", not missing,
+            "Оба приложения описаны в Compose"
+            if not missing else "Не найдены компоненты: " + ", ".join(missing),
+        )
 
-        # 5. Проверка доступности Web UI (задание 2)
-        if prom_port:
-            self._check_web_ui("Prometheus", prom_port, "/api/v1/query?query=up")
-        if grafana_port:
-            self._check_web_ui("Grafana", grafana_port, "/api/health")
-
-        return True
-
-    def _extract_host_port(self, ports_list: list, default: int) -> int:
-        """Извлекает порт хоста из секции ports (например, '8080:3000' -> 8080)"""
-        if not ports_list:
-            return default
-            
-        for port_mapping in ports_list:
-            # Форматы могут быть '9090:9090', '0.0.0.0:8080:3000/tcp', или dict (в новом синтаксисе)
-            if isinstance(port_mapping, dict):
-                return int(port_mapping.get('published', default))
-            elif isinstance(port_mapping, str):
-                parts = port_mapping.split(':')
-                if len(parts) == 2:  # '8080:3000'
-                    return int(parts[0])
-                elif len(parts) >= 3:  # '0.0.0.0:8080:3000'
-                    return int(parts[1])
-        return default
-
-    def _check_web_ui(self, service_name: str, port: int, health_endpoint: str):
-        """Проверяет доступность веб-интерфейса сервиса."""
-        url = f"http://localhost:{port}"
+        containers = []
+        container_ids = []
         try:
-            # Сначала пробуем дернуть Health-эндпоинт (он надежнее)
-            response = requests.get(f"{url}{health_endpoint}", timeout=5)
-            if response.status_code == 200:
-                self.checker.add_result(f"Web UI: {service_name}", True, f"Интерфейс доступен на порту {port} (HTTP 200)")
-                return
-                
-            # Если Health не ответил, пробуем корень
-            response_root = requests.get(url, timeout=5)
-            if response_root.status_code == 200:
-                self.checker.add_result(f"Web UI: {service_name}", True, f"Интерфейс доступен на порту {port}")
-            else:
-                self.checker.add_result(f"Web UI: {service_name}", False, f"Интерфейс вернул код {response_root.status_code}")
-                
-        except requests.exceptions.ConnectionError:
-            self.checker.add_result(f"Web UI: {service_name}", False, f"Отказ в соединении по порту {port}. Проверьте проброс портов.")
-        except Exception as e:
-            self.checker.add_result(f"Web UI: {service_name}", False, f"Ошибка HTTP-запроса: {str(e)}")
+            started, output = runtime.up(build=True)
+            self.checker.add_result(
+                "Запуск через Compose", started,
+                "Проект собран и запущен" if started else output,
+            )
+            if not started:
+                return False
+
+            containers = runtime.wait_for_containers(len(services), timeout=12)
+            container_ids = [container.id for container in containers]
+            by_service = {runtime.service_name(container): container for container in containers}
+            statuses = self._statuses(containers)
+            stable = len(containers) >= len(services) and all(status == "running" for status in statuses.values())
+            self.checker.add_result(
+                "Состояние контейнеров", stable,
+                ", ".join(f"{name}={status}" for name, status in statuses.items())
+                or "Контейнеры проекта не найдены",
+            )
+
+            app_ok, app_message = self._wait_for_app_logs(by_service, app_services, timeout=9)
+            self.checker.add_result("Логи программы №11", app_ok, app_message)
+
+            prometheus = by_service.get(roles.get("prometheus", ""))
+            grafana = by_service.get(roles.get("grafana", ""))
+            prom_ok, prom_message = self._wait_for_http_service(
+                runtime, prometheus, 9090, "/-/ready", "prometheus", timeout=12
+            )
+            self.checker.add_result("Web API Prometheus", prom_ok, prom_message)
+            grafana_ok, grafana_message = self._wait_for_http_service(
+                runtime, grafana, 3000, "/api/health", "grafana", timeout=15
+            )
+            self.checker.add_result("Web API Grafana", grafana_ok, grafana_message)
+            return stable and app_ok and prom_ok and grafana_ok
+        finally:
+            self.session.close()
+            if runtime.started:
+                stopped, message = runtime.down()
+                removed = stopped and runtime.project_resources_removed(container_ids)
+                self.checker.add_result(
+                    "Остановка через Compose", removed,
+                    "Контейнеры и временная сеть проекта удалены"
+                    if removed else message or "После compose down остались ресурсы проекта",
+                )
+
+    @staticmethod
+    def _find_roles(services):
+        roles = {}
+        for name, config in services.items():
+            fingerprint = f"{name} {config.get('image', '')}".casefold()
+            if "prometheus" in fingerprint and "exporter" not in fingerprint:
+                roles.setdefault("prometheus", name)
+            if "grafana" in fingerprint:
+                roles.setdefault("grafana", name)
+        return roles
+
+    @staticmethod
+    def _statuses(containers):
+        result = {}
+        for container in containers:
+            try:
+                container.reload()
+            except Exception:
+                pass
+            name = ComposeRuntime.service_name(container) or container.short_id
+            state = container.attrs.get("State", {})
+            status = "restarting" if state.get("Restarting") else container.status
+            result[name] = status
+        return result
+
+    def _wait_for_app_logs(self, by_service, app_services, timeout):
+        if not app_services:
+            return False, "Сервис программы №11 отсутствует"
+        deadline = time.monotonic() + timeout
+        best = ""
+        while time.monotonic() < deadline:
+            for service in app_services:
+                container = by_service.get(service)
+                if not container:
+                    continue
+                try:
+                    text = container.logs().decode("utf-8", errors="replace")
+                except Exception:
+                    continue
+                lines = [line.strip() for line in text.splitlines() if line.strip()]
+                if any("traceback" in line.casefold() for line in lines):
+                    return False, f"В логах {service} найден Traceback"
+                values = self.lab11_parser._time_values(lines)
+                architecture = any(
+                    token in text.casefold()
+                    for token in ("x86", "x64", "amd64", "x86_64", "arm", "aarch64")
+                )
+                best = f"{service}: строк={len(lines)}, значений времени={len(values)}"
+                if values and architecture:
+                    return True, best + "; архитектура указана"
+            time.sleep(0.25)
+        return False, best or "Логи приложения недоступны или не содержат актуальное время"
+
+    def _wait_for_http_service(self, runtime, container, internal_port, path, kind, timeout):
+        if container is None:
+            return False, f"Контейнер {kind} не найден"
+        ports = runtime.published_ports(container, internal_port)
+        if not ports:
+            return False, f"Порт {internal_port} контейнера {kind} не опубликован на хост"
+        url = f"http://127.0.0.1:{ports[0]}{path}"
+        deadline = time.monotonic() + timeout
+        last_error = ""
+        while time.monotonic() < deadline:
+            try:
+                response = self.session.get(url, timeout=0.8)
+                if response.status_code == 200:
+                    if kind == "grafana":
+                        try:
+                            payload = response.json()
+                        except ValueError:
+                            payload = {}
+                        if not isinstance(payload, dict) or not payload:
+                            last_error = "Grafana вернула не JSON"
+                            time.sleep(0.25)
+                            continue
+                    return True, f"{url} вернул HTTP 200"
+                last_error = f"HTTP {response.status_code}"
+            except requests.RequestException as exc:
+                last_error = str(exc)
+            time.sleep(0.25)
+        return False, f"{url} не готов: {last_error}"
